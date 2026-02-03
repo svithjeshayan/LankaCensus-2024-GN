@@ -1,0 +1,18 @@
+# Large files (exclude from git)
+geoBoundaries-LKA-ADM4.zip
+geoBoundaries-LKA-ADM4.geojson
+geoBoundaries-LKA-ADM4.shp
+geoBoundaries-LKA-ADM4.shx
+geoBoundaries-LKA-ADM4.dbf
+geoBoundaries-LKA-ADM4.topojson
+
+# Keep simplified versions
+# geoBoundaries-LKA-ADM4_simplified.*
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Anaconda
+anaconda_projects/
