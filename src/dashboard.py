@@ -560,22 +560,47 @@ def main():
         st.plotly_chart(fig_breakdown, use_container_width=True)
     
     else:
-        # Provincial overview
-        st.markdown("### 🗺️ Provincial Overview")
-        province_data = df.groupby('Province').agg({
+        # Provincial overview with dynamic filters
+        st.markdown("### 🗺️ Census Overview")
+        
+        view_level = st.radio(
+            "Categorize by:",
+            ["Province", "District", "DS Division"],
+            horizontal=True,
+            key="overview_view_level"
+        )
+        
+        col_map = {
+            "Province": "Province",
+            "District": "District",
+            "DS Division": "DS_Division"
+        }
+        
+        group_col = col_map[view_level]
+        
+        # Aggregation
+        overview_data = df.groupby(group_col).agg({
             'Total_Population': 'sum',
             'Male': 'sum',
             'Female': 'sum'
         }).reset_index().sort_values('Total_Population', ascending=True)
         
+        # Limit for DS Division to avoid overcrowding
+        if view_level == "DS Division":
+            # Showing top 20 for readability
+            st.caption("Showing Top 20 DS Divisions by Population")
+            overview_data = overview_data.tail(20)
+            
         fig_province = px.bar(
-            province_data,
-            y='Province',
+            overview_data,
+            y=group_col,
             x='Total_Population',
             orientation='h',
             color='Total_Population',
-            color_continuous_scale='Viridis'
+            color_continuous_scale='Viridis',
+            labels={'Total_Population': 'Population', group_col: view_level}
         )
+        
         fig_province.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
@@ -583,7 +608,7 @@ def main():
             xaxis=dict(gridcolor='#e2e8f0'),
             yaxis=dict(gridcolor='#e2e8f0'),
             showlegend=False,
-            height=500
+            height=500 + (200 if view_level == "District" else 0) # Taller for Districts
         )
         st.plotly_chart(fig_province, use_container_width=True)
     
