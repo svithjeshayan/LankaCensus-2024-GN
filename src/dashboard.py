@@ -104,8 +104,7 @@ st.markdown("""
     hr {
         border-color: #cbd5e1;
     }
-    
-    /* Force light mode styling even when Streamlit dark mode is active */
+    /* ===================== FORCE LIGHT MODE IN DARK THEME ===================== */
     [data-theme="dark"] {
         --primary-background-color: #f8fafc !important;
         --secondary-background-color: #ffffff !important;
@@ -113,30 +112,70 @@ st.markdown("""
         --st-font-color: #1e3a5f !important;
     }
 
+    /* App background */
     [data-theme="dark"] .stApp {
         background-color: #f8fafc !important;
         color: #1e3a5f !important;
     }
 
+    /* Headers & Markdown text */
     [data-theme="dark"] h1, 
     [data-theme="dark"] h2, 
     [data-theme="dark"] h3, 
-    [data-theme="dark"] .stMarkdown p,
-    [data-theme="dark"] div[data-testid="metric-container"] label,
+    [data-theme="dark"] .stMarkdown p {
+        color: #1e3a5f !important;
+    }
+
+    /* Metric cards */
+    [data-theme="dark"] div[data-testid="metric-container"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 4px solid #1e3a5f !important;
+    }
+
+    [data-theme="dark"] div[data-testid="metric-container"] label {
+        color: #64748b !important;
+    }
+
     [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
         color: #1e3a5f !important;
     }
 
-    /* Dataframes and charts */
-    [data-theme="dark"] .stDataFrame,
-    [data-theme="dark"] hr,
-    [data-theme="dark"] .streamlit-expanderHeader {
-        background-color: #ffffff !important;
-        border-color: #e2e8f0 !important;
+    /* Sidebar */
+    [data-theme="dark"] section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%) !important;
+        border-right: 1px solid #e2e8f0 !important;
+    }
+
+    [data-theme="dark"] section[data-testid="stSidebar"] label,
+    [data-theme="dark"] section[data-testid="stSidebar"] h1,
+    [data-theme="dark"] section[data-testid="stSidebar"] h2,
+    [data-theme="dark"] section[data-testid="stSidebar"] h3 {
         color: #1e3a5f !important;
     }
 
-    /* Force Plotly chart font colors */
+    /* Expanders */
+    [data-theme="dark"] .streamlit-expanderHeader {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #1e3a5f !important;
+    }
+
+    /* Dataframe */
+    [data-theme="dark"] .stDataFrame {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0 !important;
+        background-color: #ffffff !important;
+        color: #1e3a5f !important;
+    }
+
+    /* Divider */
+    [data-theme="dark"] hr {
+        border-color: #cbd5e1 !important;
+    }
+
+    /* Plotly charts: force text color */
     [data-theme="dark"] .js-plotly-plot text {
         fill: #1e3a5f !important;
     }
