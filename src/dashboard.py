@@ -18,41 +18,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS: Dark Mode Executive Theme ---
+# --- Custom CSS: Executive Theme ---
 st.markdown("""
 <style>
-    /* Dark Mode Executive Theme */
+    /* Executive Light Theme */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     /* Base variables */
     :root {
-        --bg-primary: #0f172a;
-        --bg-secondary: #1e293b;
-        --text-primary: #f1f5f9;
-        --text-secondary: #cbd5e1;
-        --text-muted: #94a3b8;
-        --accent: #06b6d4;
-        --border: #334155;
+        --primary-color: #1e3a5f;
+        --secondary-color: #0ea5e9;
     }
-
-    /* Main background - Dark slate */
+    
+    /* Main background */
     .stApp {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        background-color: #f8fafc;
         font-family: 'Inter', sans-serif;
     }
     
-    /* Metric cards - Dark glassmorphism */
+    /* Metric cards - Executive style */
     div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-        border: 1px solid var(--border);
-        border-left: 4px solid var(--accent);
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid #1e3a5f;
         border-radius: 8px;
         padding: 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     
     div[data-testid="metric-container"] label {
-        color: var(--text-muted) !important;
+        color: #64748b !important;
         font-weight: 500;
         font-size: 0.85rem;
         text-transform: uppercase;
@@ -60,19 +55,19 @@ st.markdown("""
     }
     
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: var(--text-primary) !important;
+        color: #1e3a5f !important;
         font-weight: 700;
         font-size: 1.8rem;
     }
-    
+
     div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
-        color: var(--text-secondary) !important;
+        color: #64748b !important;
     }
     
-    /* Sidebar styling - Dark navy */
+    /* Sidebar styling - Executive */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-        border-right: 1px solid var(--border);
+        background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
+        border-right: 1px solid #334155;
     }
     
     section[data-testid="stSidebar"] .stSelectbox label,
@@ -88,49 +83,106 @@ st.markdown("""
         color: #f8fafc !important;
     }
     
-    /* Headers - Light text */
+    /* Headers - Navy executive style */
     h1, h2, h3, h4, h5, h6 {
-        color: var(--text-primary) !important;
+        color: #1e3a5f !important;
         font-weight: 600;
     }
     
     /* Markdown text */
-    .stMarkdown, .stMarkdown p, .stMarkdown span {
-        color: var(--text-secondary);
+    .stMarkdown p {
+        color: #475569;
     }
     
     /* Expander */
     .streamlit-expanderHeader {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        color: var(--text-primary);
+        color: #1e3a5f;
     }
     
     /* Dataframe */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
-        border: 1px solid var(--border);
+        border: 1px solid #e2e8f0;
     }
     
     /* Divider */
     hr {
-        border-color: #475569;
+        border-color: #cbd5e1;
     }
     
-    /* Plotly charts: light text */
+    /* Plotly charts text */
     .js-plotly-plot text {
-        fill: var(--text-primary) !important;
+        fill: #1e3a5f !important;
     }
-    
     .js-plotly-plot .gtitle {
-        fill: var(--text-primary) !important;
+        fill: #1e3a5f !important;
     }
     
-    /* Fallback for forced dark mode overrides if config fails */
+    /* ===================== DARK MODE SUPPORT ===================== */
+    /* Only apply dark theme styling when user explicitly switches to Dark Mode */
     [data-theme="dark"] .stApp {
-        background-color: var(--bg-primary) !important;
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+    }
+    
+    [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+    [data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 {
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] .stMarkdown p, [data-theme="dark"] .stMarkdown span {
+        color: #cbd5e1 !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+        border-color: #334155 !important;
+        border-left-color: #06b6d4 !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] label {
+        color: #94a3b8 !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
+        color: #cbd5e1 !important;
+    }
+    
+    [data-theme="dark"] section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+    }
+    
+    [data-theme="dark"] .streamlit-expanderHeader {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] .stDataFrame {
+        border-color: #334155 !important;
+    }
+    
+    [data-theme="dark"] .stDataFrame table, [data-theme="dark"] .stDataFrame th, [data-theme="dark"] .stDataFrame td {
+        background-color: #1e293b !important;
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] hr {
+        border-color: #475569 !important;
+    }
+    
+    [data-theme="dark"] .js-plotly-plot text {
+        fill: #f1f5f9 !important;
+    }
+    [data-theme="dark"] .js-plotly-plot .gtitle {
+        fill: #f1f5f9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
