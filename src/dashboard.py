@@ -238,22 +238,33 @@ def main():
         st.markdown("### 🔍 Filters")
         
         # Province filter
-        provinces = ["All"] + sorted(df['Province'].dropna().unique().tolist())
-        selected_province = st.selectbox("Province", provinces, index=0)
+        provinces = sorted(df['Province'].dropna().unique().tolist())
+        selected_provinces = st.multiselect("Select Province(s)", provinces, default=[])
         
         # Filter districts based on province
-        if selected_province != "All":
-            district_options = ["All"] + sorted(df[df['Province'] == selected_province]['District'].dropna().unique().tolist())
+        if selected_provinces:
+            district_options = sorted(df[df['Province'].isin(selected_provinces)]['District'].dropna().unique().tolist())
         else:
-            district_options = ["All"] + sorted(df['District'].dropna().unique().tolist())
-        selected_district = st.selectbox("District", district_options, index=0)
+            district_options = sorted(df['District'].dropna().unique().tolist())
+            
+        selected_districts = st.multiselect("Select District(s)", district_options, default=[])
         
         # Filter DS Divisions based on district
-        if selected_district != "All":
-            ds_options = ["All"] + sorted(df[df['District'] == selected_district]['DS_Division'].dropna().unique().tolist())
+        # Only show DS options if districts are selected to avoid huge lists, 
+        # or if specific provinces selected (optional, sticking to District dependency for performance)
+        if selected_districts:
+            ds_options = sorted(df[df['District'].isin(selected_districts)]['DS_Division'].dropna().unique().tolist())
+        elif selected_provinces: # Allow DS selection if Province is selected too
+            ds_options = sorted(df[df['Province'].isin(selected_provinces)]['DS_Division'].dropna().unique().tolist())
         else:
-            ds_options = ["All"]
-        selected_ds = st.selectbox("DS Division", ds_options, index=0)
+            ds_options = [] # Hide DS options if no upper level selected to encourage drill-down.
+            
+        if ds_options:
+            selected_ds = st.multiselect("Select DS Division(s)", ds_options, default=[])
+        else:
+            selected_ds = []
+            if not selected_provinces and not selected_districts:
+                st.info("Select a Province or District to view DS Divisions")
         
         st.markdown("---")
         st.markdown("### 👤 Demographics")
@@ -272,17 +283,17 @@ def main():
         
         st.markdown("---")
         st.markdown("### 📊 View Options")
-        show_map = st.toggle("Show Map", value=True)
+        show_map = st.toggle("Show Map", value=False) # Default Disabled
         show_raw_data = st.checkbox("Show Raw Data Table", value=False)
     
     # --- Apply Filters ---
     filtered_df = df.copy()
-    if selected_province != "All":
-        filtered_df = filtered_df[filtered_df['Province'] == selected_province]
-    if selected_district != "All":
-        filtered_df = filtered_df[filtered_df['District'] == selected_district]
-    if selected_ds != "All":
-        filtered_df = filtered_df[filtered_df['DS_Division'] == selected_ds]
+    if selected_provinces:
+        filtered_df = filtered_df[filtered_df['Province'].isin(selected_provinces)]
+    if selected_districts:
+        filtered_df = filtered_df[filtered_df['District'].isin(selected_districts)]
+    if selected_ds:
+        filtered_df = filtered_df[filtered_df['DS_Division'].isin(selected_ds)]
     
     # --- Key Metrics Row ---
     st.markdown("### 📈 Key Metrics")
@@ -298,215 +309,147 @@ def main():
     age_60_64 = filtered_df['Age_60_64'].sum()
     age_65_plus = filtered_df['Age_65_Plus'].sum()
     
-    # Apply gender focus
-    if selected_gender == "Male":
-        display_pop = total_male
-        gender_label = "Male Population"
-    elif selected_gender == "Female":
-        display_pop = total_female
-        gender_label = "Female Population"
-    else:
-        display_pop = total_pop
-        gender_label = "Total Population"
-    
-    # Apply age group filter (sum selected groups)
-    if selected_age_groups:
-        age_map = {
-            "0-14 (Youth)": age_0_14,
-            "15-59 (Working)": age_15_59,
-            "60-64": age_60_64,
-            "65+ (Elderly)": age_65_plus
-        }
-        selected_age_pop = sum([age_map[ag] for ag in selected_age_groups])
-        age_label = " + ".join([ag.split()[0] for ag in selected_age_groups])
-    else:
-        selected_age_pop = total_pop
-        age_label = "All Ages"
-    
-    avg_sex_ratio = (total_female / max(total_male, 1) * 100)
-    
-    # Calculate aggregate dependency ratio (weighted average) instead of mean of ratios
-    total_youth = filtered_df['Age_0_14'].sum()
-    total_elderly = filtered_df['Age_60_64'].sum() + filtered_df['Age_65_Plus'].sum()
-    total_working = filtered_df['Age_15_59'].sum()
-    
-    # Avoid division by zero
-    avg_dependency = ((total_youth + total_elderly) / max(total_working, 1) * 100)
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
+    # Display Metrics
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric(gender_label, f"{display_pop:,}")
+        st.metric(label="Total Population", value=f"{total_pop:,.0f}")
     with col2:
-        st.metric(f"Age: {age_label}", f"{selected_age_pop:,}")
+        st.metric(label="Male Population", value=f"{total_male:,.0f}", delta=f"{(total_male/total_pop)*100:.1f}%" if total_pop > 0 else "0%")
     with col3:
-        st.metric("Sex Ratio (F/M)", f"{avg_sex_ratio:.1f}")
+        st.metric(label="Female Population", value=f"{total_female:,.0f}", delta=f"{(total_female/total_pop)*100:.1f}%" if total_pop > 0 else "0%")
     with col4:
-        st.metric("Avg Dependency %", f"{avg_dependency:.1f}%")
-    with col5:
-        st.metric("GN Divisions", f"{len(filtered_df):,}")
-    
+        # Dependency Ratio: (Age 0-14 + Age 65+) / Age 15-59 * 100
+        # Determine dependents and working age from current filtered data
+        dependents = age_0_14 + age_65_plus
+        working_pop = age_15_59 + age_60_64 # Using 15-64 as working age for dependency ratio
+        dep_ratio = (dependents / working_pop * 100) if working_pop > 0 else 0
+        st.metric(label="Dependency Ratio", value=f"{dep_ratio:.1f}%")
+
     st.markdown("---")
     
-    # --- Geospatial Visualization ---
-    if show_map and geojson:
-        st.markdown("### 🗺️ Population Density Map")
-        
-        # Optimization: Only plot if subset is reasonable size, or warn
-        if len(filtered_df) > 1000 and selected_district == "All":
-             st.info("⚠️ Displaying large dataset on map. Filters recommended for better performance.")
-        
-        # Center map logic
-        if selected_ds != "All":
-            center_lat, center_lon = 6.9271, 79.8612 # Default Colombo, simplistic
-            zoom = 11
-        elif selected_district != "All":
-            center_lat, center_lon = 7.8731, 80.7718 # Sri Lanka center roughly
-            zoom = 9
-        else:
-            center_lat, center_lon = 7.8731, 80.7718
-            zoom = 7
-            
-        fig_map = px.choropleth_mapbox(
-            filtered_df,
-            geojson=geojson,
-            locations='GN_Link_Key',
-            featureidkey="properties.shapeName_upper",
-            color='Total_Population',
-            mapbox_style="carto-positron",
-            zoom=zoom,
-            center={"lat": center_lat, "lon": center_lon},
-            opacity=0.6,
-            labels={'Total_Population': 'Population', 'GN_Link_Key': 'GN Division'},
-            title="Population Distribution",
-            color_continuous_scale="Viridis",
-            hover_name='GN_Division'
-        )
-        fig_map.update_layout(
-            margin={"r":0,"t":40,"l":0,"b":0},
-            paper_bgcolor='rgba(0,0,0,0)',
-            font_color='#1e3a5f',
-        )
-        st.plotly_chart(fig_map, use_container_width=True)
-        st.caption("Note: Map matching is based on GN Division names. Some boundaries may not match perfectly due to naming variations.")
-        st.markdown("---")
-    elif show_map and not geojson:
-        st.warning("⚠️ GeoJSON file not found. Map visualization disabled.")
-        st.markdown("---")
-
+    # --- Layout: Map and Donut Chart ---
+    col_map, col_chart = st.columns([1.5, 1])
     
-    # --- Charts Section ---
-    chart_col1, chart_col2 = st.columns(2)
-    
-    with chart_col1:
-        st.markdown("#### 👥 Gender Distribution")
-        gender_data = pd.DataFrame({
-            'Gender': ['Male', 'Female'],
-            'Population': [total_male, total_female]
-        })
-        fig_gender = px.pie(
-            gender_data, 
-            values='Population', 
-            names='Gender',
-            color='Gender',
-            color_discrete_map={'Male': '#1e3a5f', 'Female': '#0d9488'},
-            hole=0.4
-        )
+    with col_map:
+        if show_map:
+            if geojson:
+                st.markdown("### 🗺️ Population Density")
+                
+                # Center map logic
+                center_lat, center_lon = 7.8731, 80.7718 # Default Sri Lanka center
+                zoom = 7
+                
+                # Adjust zoom/center if specific areas are selected
+                if selected_ds:
+                    # For DS Divisions, try to center on the first selected DS (simplistic)
+                    first_ds_name = selected_ds[0]
+                    ds_centroid = filtered_df[filtered_df['DS_Division'] == first_ds_name][['Latitude', 'Longitude']].mean()
+                    if not ds_centroid.isnull().any():
+                        center_lat, center_lon = ds_centroid['Latitude'], ds_centroid['Longitude']
+                        zoom = 11
+                elif selected_districts:
+                    # For Districts, try to center on the first selected District
+                    first_district_name = selected_districts[0]
+                    district_centroid = filtered_df[filtered_df['District'] == first_district_name][['Latitude', 'Longitude']].mean()
+                    if not district_centroid.isnull().any():
+                        center_lat, center_lon = district_centroid['Latitude'], district_centroid['Longitude']
+                        zoom = 9
+                elif selected_provinces:
+                    # For Provinces, try to center on the first selected Province
+                    first_province_name = selected_provinces[0]
+                    province_centroid = filtered_df[filtered_df['Province'] == first_province_name][['Latitude', 'Longitude']].mean()
+                    if not province_centroid.isnull().any():
+                        center_lat, center_lon = province_centroid['Latitude'], province_centroid['Longitude']
+                        zoom = 8
+                
+                # Optimization: Only plot if subset is reasonable size, or warn
+                if len(filtered_df) > 1000 and not selected_districts and not selected_ds:
+                    st.info("⚠️ Displaying large dataset on map. Filters recommended for better performance.")
+                
+                fig_map = px.choropleth_mapbox(
+                    filtered_df,
+                    geojson=geojson,
+                    locations='GN_Link_Key',
+                    featureidkey="properties.shapeName_upper",
+                    color='Total_Population',
+                    mapbox_style="carto-positron",
+                    zoom=zoom,
+                    center={"lat": center_lat, "lon": center_lon},
+                    opacity=0.6,
+                    labels={'Total_Population': 'Population', 'GN_Link_Key': 'GN Division'},
+                    title="Population Distribution",
+                    color_continuous_scale="Viridis",
+                    hover_name='GN_Division'
+                )
+                fig_map.update_layout(
+                    margin={"r":0,"t":40,"l":0,"b":0},
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#1e3a5f',
+                )
+                st.plotly_chart(fig_map, use_container_width=True)
+                st.caption("Note: Map matching is based on GN Division names. Some boundaries may not match perfectly due to naming variations.")
+            else:
+                st.warning("Map data not available.")
+        
+    with col_chart:
+        # Donut chart for Gender Distribution
+        st.markdown("### ⚧ Gender Distribution")
+        
+        # Data for chart
+        labels = ['Male', 'Female']
+        values = [total_male, total_female]
+        
+        fig_gender = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=['#0ea5e9', '#ec4899'])])
         fig_gender.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             font_color='#1e3a5f',
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+            margin=dict(t=0, b=0, l=0, r=0)
         )
         st.plotly_chart(fig_gender, use_container_width=True)
+
+    # --- Population Pyramid (Approximation) ---
+    st.markdown("### 👥 Age Structure")
     
-    with chart_col2:
-        st.markdown("#### 🎂 Age Distribution")
-        age_data = pd.DataFrame({
-            'Age Group': ['0-14 (Youth)', '15-59 (Working)', '60-64', '65+ (Elderly)'],
-            'Population': [
-                filtered_df['Age_0_14'].sum(),
-                filtered_df['Age_15_59'].sum(),
-                filtered_df['Age_60_64'].sum(),
-                filtered_df['Age_65_Plus'].sum()
-            ]
-        })
-        fig_age = px.bar(
-            age_data,
-            x='Age Group',
-            y='Population',
-            color='Age Group',
-            color_discrete_sequence=['#1e3a5f', '#0d9488', '#d97706', '#dc2626']
-        )
-        fig_age.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font_color='#1e3a5f',
-            showlegend=False,
-            xaxis=dict(gridcolor='#e2e8f0'),
-            yaxis=dict(gridcolor='#e2e8f0')
-        )
-        st.plotly_chart(fig_age, use_container_width=True)
-    
-    # --- Population Pyramid ---
-    st.markdown("---")
-    st.markdown("### 🔺 Population Pyramid by Age Group")
-    
-    # Aggregate by age groups for pyramid
-    pyramid_data = pd.DataFrame({
+    # Prepare data for pyramid
+    age_data = pd.DataFrame({
         'Age Group': ['0-14', '15-59', '60-64', '65+'],
-        'Male': [
-            -filtered_df['Age_0_14'].sum() * (total_male / max(total_pop, 1)),
-            -filtered_df['Age_15_59'].sum() * (total_male / max(total_pop, 1)),
-            -filtered_df['Age_60_64'].sum() * (total_male / max(total_pop, 1)),
-            -filtered_df['Age_65_Plus'].sum() * (total_male / max(total_pop, 1))
-        ],
-        'Female': [
-            filtered_df['Age_0_14'].sum() * (total_female / max(total_pop, 1)),
-            filtered_df['Age_15_59'].sum() * (total_female / max(total_pop, 1)),
-            filtered_df['Age_60_64'].sum() * (total_female / max(total_pop, 1)),
-            filtered_df['Age_65_Plus'].sum() * (total_female / max(total_pop, 1))
-        ]
+        'Population': [age_0_14, age_15_59, age_60_64, age_65_plus]
     })
     
-    fig_pyramid = go.Figure()
-    fig_pyramid.add_trace(go.Bar(
-        y=pyramid_data['Age Group'],
-        x=pyramid_data['Male'],
-        name='Male',
+    fig_pyramid = px.bar(
+        age_data,
+        x='Population',
+        y='Age Group',
         orientation='h',
-        marker_color='#1e3a5f'
-    ))
-    fig_pyramid.add_trace(go.Bar(
-        y=pyramid_data['Age Group'],
-        x=pyramid_data['Female'],
-        name='Female',
-        orientation='h',
-        marker_color='#0d9488'
-    ))
+        color='Age Group',
+        color_discrete_sequence=['#6366f1', '#10b981', '#f59e0b', '#64748b'],
+        text='Population'
+    )
     fig_pyramid.update_layout(
-        barmode='overlay',
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font_color='#1e3a5f',
-        xaxis=dict(
-            title='Population',
-            gridcolor='#e2e8f0',
-            tickformat=',d',
-            tickvals=[-2000000, -1000000, 0, 1000000, 2000000],
-            ticktext=['2M', '1M', '0', '1M', '2M']
-        ),
-        yaxis=dict(gridcolor='#e2e8f0'),
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
-        height=400
+        xaxis_title="Population",
+        showlegend=False,
+        height=300
     )
     st.plotly_chart(fig_pyramid, use_container_width=True)
     
     # --- District/DS Level Breakdown ---
     st.markdown("---")
     
-    if selected_province != "All" and selected_district == "All":
-        st.markdown(f"### 📊 District Breakdown in {selected_province}")
+    # Logic for Drill-down Charts
+    # 1. If Provinces selected (but no districts): Show District Breakdown
+    # 2. If Districts selected (but no DS): Show DS Breakdown
+    # 3. Else: Show Top Level Overview
+    
+    if selected_provinces and not selected_districts:
+        province_names = ", ".join(selected_provinces)
+        if len(selected_provinces) > 3: province_names = f"{len(selected_provinces)} Provinces"
+        st.markdown(f"### 📊 District Breakdown in {province_names}")
+        
         breakdown = filtered_df.groupby('District').agg({
             'Total_Population': 'sum',
             'Male': 'sum',
@@ -532,8 +475,11 @@ def main():
         )
         st.plotly_chart(fig_breakdown, use_container_width=True)
     
-    elif selected_district != "All" and selected_ds == "All":
-        st.markdown(f"### 📊 DS Division Breakdown in {selected_district}")
+    elif selected_districts and not selected_ds:
+        district_names = ", ".join(selected_districts)
+        if len(selected_districts) > 3: district_names = f"{len(selected_districts)} Districts"
+        st.markdown(f"### 📊 DS Division Breakdown in {district_names}")
+        
         breakdown = filtered_df.groupby('DS_Division').agg({
             'Total_Population': 'sum',
             'Male': 'sum',
@@ -542,8 +488,13 @@ def main():
             'Dependency_Ratio': 'mean'
         }).reset_index().sort_values('Total_Population', ascending=False)
         
+        # Limit if too many
+        if len(breakdown) > 30:
+            st.caption(f"Showing Top 30 of {len(breakdown)} DS Divisions")
+            breakdown = breakdown.head(30)
+            
         fig_breakdown = px.bar(
-            breakdown.head(20),  # Top 20
+            breakdown,
             x='DS_Division',
             y='Total_Population',
             color='Dependency_Ratio',
@@ -560,7 +511,9 @@ def main():
         st.plotly_chart(fig_breakdown, use_container_width=True)
     
     else:
-        # Provincial overview with dynamic filters
+        # Default Overview (No filters OR Deepest filters active)
+        # Included new Drill-down logic logic from previous turn
+        
         st.markdown("### 🗺️ Census Overview")
         
         view_level = st.radio(
