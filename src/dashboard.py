@@ -379,99 +379,32 @@ def main():
 
     st.markdown("---")
     
-    # --- Layout: Map and Donut Chart ---
-    col_map, col_chart = st.columns([1.5, 1])
+    # --- Charts & Visualization Section ---
     
-    with col_map:
-        if show_map:
-            if geojson:
-                st.markdown("### 🗺️ Population Density")
-                
-                # Center map logic
-                center_lat, center_lon = 7.8731, 80.7718 # Default Sri Lanka center
-                zoom = 7
-                
-                # Adjust zoom/center if specific areas are selected
-                if selected_ds:
-                    # For DS Divisions, try to center on the first selected DS (simplistic)
-                    first_ds_name = selected_ds[0]
-                    ds_centroid = filtered_df[filtered_df['DS_Division'] == first_ds_name][['Latitude', 'Longitude']].mean()
-                    if not ds_centroid.isnull().any():
-                        center_lat, center_lon = ds_centroid['Latitude'], ds_centroid['Longitude']
-                        zoom = 11
-                elif selected_districts:
-                    # For Districts, try to center on the first selected District
-                    first_district_name = selected_districts[0]
-                    district_centroid = filtered_df[filtered_df['District'] == first_district_name][['Latitude', 'Longitude']].mean()
-                    if not district_centroid.isnull().any():
-                        center_lat, center_lon = district_centroid['Latitude'], district_centroid['Longitude']
-                        zoom = 9
-                elif selected_provinces:
-                    # For Provinces, try to center on the first selected Province
-                    first_province_name = selected_provinces[0]
-                    province_centroid = filtered_df[filtered_df['Province'] == first_province_name][['Latitude', 'Longitude']].mean()
-                    if not province_centroid.isnull().any():
-                        center_lat, center_lon = province_centroid['Latitude'], province_centroid['Longitude']
-                        zoom = 8
-                
-                # Optimization: Only plot if subset is reasonable size, or warn
-                if len(filtered_df) > 1000 and not selected_districts and not selected_ds:
-                    st.info("⚠️ Displaying large dataset on map. Filters recommended for better performance.")
-                
-                fig_map = px.choropleth_mapbox(
-                    filtered_df,
-                    geojson=geojson,
-                    locations='GN_Link_Key',
-                    featureidkey="properties.shapeName_upper",
-                    color='Total_Population',
-                    mapbox_style="carto-positron",
-                    zoom=zoom,
-                    center={"lat": center_lat, "lon": center_lon},
-                    opacity=0.6,
-                    labels={'Total_Population': 'Population', 'GN_Link_Key': 'GN Division'},
-                    title="Population Distribution",
-                    color_continuous_scale="Viridis",
-                    hover_name='GN_Division'
-                )
-                fig_map.update_layout(
-                    margin={"r":0,"t":40,"l":0,"b":0},
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#1e3a5f',
-                )
-                st.plotly_chart(fig_map, use_container_width=True)
-                st.caption("Note: Map matching is based on GN Division names. Some boundaries may not match perfectly due to naming variations.")
-            else:
-                st.warning("Map data not available.")
-        
-    with col_chart:
-        # Donut chart for Gender Distribution
-        st.markdown("### ⚧ Gender Distribution")
-        
-        # Data for chart
-        labels = ['Male', 'Female']
-        values = [total_male, total_female]
-        
-        fig_gender = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=['#0ea5e9', '#ec4899'])])
-        fig_gender.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font_color='#1e3a5f',
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
-            margin=dict(t=0, b=0, l=0, r=0)
-        )
-        st.plotly_chart(fig_gender, use_container_width=True)
+    # Pre-calculate Figures to separate logic from layout
+    
+    # 1. Gender Donut
+    labels = ['Male', 'Female']
+    values = [total_male, total_female]
+    fig_gender = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=['#0ea5e9', '#ec4899'])])
+    fig_gender.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#1e3a5f',
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(t=30, b=0, l=0, r=0),
+        height=300
+    )
 
-    # --- Population Pyramid (Approximation) ---
-    st.markdown("### 👥 Age Structure")
-    
-    # Prepare data for pyramid
-    age_data = pd.DataFrame({
+    # 2. Population Structure (Pyramid or Bar)
+    age_df = pd.DataFrame({
         'Age Group': ['0-14', '15-59', '60-64', '65+'],
-        'Population': [age_0_14, age_15_59, age_60_64, age_65_plus]
+        'Population': [age_0_14, age_15_59, age_60_64, age_65_plus],
+        'Color': ['#6366f1', '#10b981', '#f59e0b', '#64748b']
     })
     
-    fig_pyramid = px.bar(
-        age_data,
+    fig_age = px.bar(
+        age_df,
         x='Population',
         y='Age Group',
         orientation='h',
@@ -479,15 +412,85 @@ def main():
         color_discrete_sequence=['#6366f1', '#10b981', '#f59e0b', '#64748b'],
         text='Population'
     )
-    fig_pyramid.update_layout(
+    fig_age.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font_color='#1e3a5f',
         xaxis_title="Population",
         showlegend=False,
-        height=300
+        height=300,
+        margin=dict(l=0, r=0, t=30, b=0)
     )
-    st.plotly_chart(fig_pyramid, use_container_width=True)
+
+    # --- Dynamic Layout Logic ---
+    if show_map and geojson:
+        # Layout: Map (Left) | Gender (Right) -> Age (Bottom)
+        col_left, col_right = st.columns([1.5, 1])
+        
+        with col_left:
+            st.markdown("### 🗺️ Population Density")
+            
+            # Center map logic
+            center_lat, center_lon = 7.8731, 80.7718 # Default Sri Lanka center
+            zoom = 7
+            
+            # Adjust zoom/center if specific areas are selected
+            if selected_ds and not filtered_df.empty:
+                first_ds = filtered_df[filtered_df['DS_Division'].isin(selected_ds)].iloc[0]
+                # Approximation if Lat/Lon available in DF, else default
+                if 'Latitude' in filtered_df.columns:
+                     center_lat = filtered_df[filtered_df['DS_Division'].isin(selected_ds)]['Latitude'].mean()
+                     center_lon = filtered_df[filtered_df['DS_Division'].isin(selected_ds)]['Longitude'].mean()
+                zoom = 10
+            elif selected_districts and not filtered_df.empty:
+                if 'Latitude' in filtered_df.columns:
+                     center_lat = filtered_df[filtered_df['District'].isin(selected_districts)]['Latitude'].mean()
+                     center_lon = filtered_df[filtered_df['District'].isin(selected_districts)]['Longitude'].mean()
+                zoom = 9
+
+            # Optimization check
+            if len(filtered_df) > 1000 and not selected_districts and not selected_ds:
+                 st.info("⚠️ Large dataset. Filter to improve map performance.")
+
+            fig_map = px.choropleth_mapbox(
+                filtered_df,
+                geojson=geojson,
+                locations='GN_Link_Key',
+                featureidkey="properties.shapeName_upper",
+                color='Total_Population',
+                mapbox_style="carto-positron",
+                zoom=zoom,
+                center={"lat": center_lat, "lon": center_lon},
+                opacity=0.6,
+                labels={'Total_Population': 'Pop'},
+                color_continuous_scale="Viridis",
+            )
+            fig_map.update_layout(
+                margin={"r":0,"t":0,"l":0,"b":0},
+                paper_bgcolor='rgba(0,0,0,0)',
+            )
+            st.plotly_chart(fig_map, use_container_width=True)
+            
+        with col_right:
+            st.markdown("### ⚧ Gender Dist.")
+            st.plotly_chart(fig_gender, use_container_width=True)
+            
+        # Age Structure (Full Width below Map/Gender)
+        st.markdown("### 👥 Age Structure")
+        st.plotly_chart(fig_age, use_container_width=True)
+
+    else:
+        # Layout: Gender (Left) | Age (Right) -> Balanced Grid
+        if show_map and not geojson:
+            st.warning("⚠️ Map data not available.")
+            
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### ⚧ Gender Distribution")
+            st.plotly_chart(fig_gender, use_container_width=True)
+        with c2:
+            st.markdown("### 👥 Age Structure")
+            st.plotly_chart(fig_age, use_container_width=True)
     
     # --- District/DS Level Breakdown ---
     st.markdown("---")
