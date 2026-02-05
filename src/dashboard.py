@@ -105,43 +105,40 @@ st.markdown("""
         border-color: #cbd5e1;
     }
     
-    /* ===== DARK MODE OVERRIDES ===== */
-    /* Detect Streamlit dark mode and override text colors for visibility */
-    
+    /* Force light mode styling even when Streamlit dark mode is active */
+    [data-theme="dark"] {
+        --primary-background-color: #f8fafc !important;
+        --secondary-background-color: #ffffff !important;
+        --st-border-color: #e2e8f0 !important;
+        --st-font-color: #1e3a5f !important;
+    }
+
+    [data-theme="dark"] .stApp {
+        background-color: #f8fafc !important;
+        color: #1e3a5f !important;
+    }
+
     [data-theme="dark"] h1, 
     [data-theme="dark"] h2, 
-    [data-theme="dark"] h3 {
-        color: #e2e8f0 !important;
-    }
-    
-    [data-theme="dark"] .stMarkdown p {
-        color: #cbd5e1 !important;
-    }
-    
-    [data-theme="dark"] div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 1px solid #334155;
-        border-left: 4px solid #60a5fa;
-    }
-    
-    [data-theme="dark"] div[data-testid="metric-container"] label {
-        color: #94a3b8 !important;
-    }
-    
+    [data-theme="dark"] h3, 
+    [data-theme="dark"] .stMarkdown p,
+    [data-theme="dark"] div[data-testid="metric-container"] label,
     [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #f1f5f9 !important;
+        color: #1e3a5f !important;
     }
-    
-    [data-theme="dark"] .stApp {
-        background-color: #0f172a;
+
+    /* Dataframes and charts */
+    [data-theme="dark"] .stDataFrame,
+    [data-theme="dark"] hr,
+    [data-theme="dark"] .streamlit-expanderHeader {
+        background-color: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        color: #1e3a5f !important;
     }
-    
-    [data-theme="dark"] .stDataFrame {
-        border: 1px solid #334155;
-    }
-    
-    [data-theme="dark"] hr {
-        border-color: #334155;
+
+    /* Force Plotly chart font colors */
+    [data-theme="dark"] .js-plotly-plot text {
+        fill: #1e3a5f !important;
     }
 </style>
 """, unsafe_allow_html=True)
