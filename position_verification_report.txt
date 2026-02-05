@@ -1,0 +1,9 @@
+FULL GN POSITION VERIFICATION REPORT
+==================================================
+
+Total features: 20895
+In Sri Lanka bounds: 20895 (100.00%)
+Out of bounds: 0
+No valid geometry: 0
+
+RESULT: ALL GN divisions are correctly positioned within Sri Lanka!
