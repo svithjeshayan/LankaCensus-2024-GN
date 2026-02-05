@@ -104,6 +104,45 @@ st.markdown("""
     hr {
         border-color: #cbd5e1;
     }
+    
+    /* ===== DARK MODE OVERRIDES ===== */
+    /* Detect Streamlit dark mode and override text colors for visibility */
+    
+    [data-theme="dark"] h1, 
+    [data-theme="dark"] h2, 
+    [data-theme="dark"] h3 {
+        color: #e2e8f0 !important;
+    }
+    
+    [data-theme="dark"] .stMarkdown p {
+        color: #cbd5e1 !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid #334155;
+        border-left: 4px solid #60a5fa;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] label {
+        color: #94a3b8 !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+        color: #f1f5f9 !important;
+    }
+    
+    [data-theme="dark"] .stApp {
+        background-color: #0f172a;
+    }
+    
+    [data-theme="dark"] .stDataFrame {
+        border: 1px solid #334155;
+    }
+    
+    [data-theme="dark"] hr {
+        border-color: #334155;
+    }
 </style>
 """, unsafe_allow_html=True)
 
