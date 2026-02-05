@@ -18,53 +18,65 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS for Dark Mode Executive Theme ---
+# --- Custom CSS: Force Light Mode Always ---
 st.markdown("""
 <style>
-    /* Dark Mode Executive Theme */
+    /* ===================== EXECUTIVE LIGHT THEME ===================== */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    /* Main background - Dark slate */
-    .stApp {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-        font-family: 'Inter', sans-serif;
+    /* Base variables for consistency */
+    :root {
+        --bg-primary: #f8fafc;
+        --bg-secondary: #ffffff;
+        --text-primary: #1e3a5f;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+        --accent: #1e3a5f;
+        --border: #e2e8f0;
     }
     
-    /* Metric cards - Dark glassmorphism */
+    /* Main App Background */
+    .stApp {
+        background-color: #f8fafc !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    /* ===================== METRIC CARDS ===================== */
     div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-        border: 1px solid #475569;
-        border-left: 4px solid #06b6d4;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 4px solid #1e3a5f !important;
+        border-radius: 8px !important;
+        padding: 20px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     }
     
     div[data-testid="metric-container"] label {
-        color: #94a3b8 !important;
-        font-weight: 500;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        color: #64748b !important;
+        font-weight: 500 !important;
+        font-size: 0.85rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
     
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #f1f5f9 !important;
-        font-weight: 700;
-        font-size: 1.8rem;
+        color: #1e3a5f !important;
+        font-weight: 700 !important;
+        font-size: 1.8rem !important;
     }
     
-    /* Sidebar styling - Dark navy */
+    div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
+        color: #475569 !important;
+    }
+    
+    /* ===================== SIDEBAR ===================== */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-        border-right: 1px solid #334155;
+        background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%) !important;
+        border-right: 1px solid #334155 !important;
     }
     
-    section[data-testid="stSidebar"] .stSelectbox label,
-    section[data-testid="stSidebar"] .stMultiSelect label,
-    section[data-testid="stSidebar"] .stCheckbox label {
+    section[data-testid="stSidebar"] * {
         color: #e2e8f0 !important;
-        font-weight: 500;
     }
     
     section[data-testid="stSidebar"] h1,
@@ -73,111 +85,150 @@ st.markdown("""
         color: #f8fafc !important;
     }
     
-    /* Headers - Light text */
-    h1, h2, h3 {
-        color: #f1f5f9 !important;
-        font-weight: 600;
+    /* ===================== HEADERS ===================== */
+    h1, h2, h3, h4, h5, h6 {
+        color: #1e3a5f !important;
+        font-weight: 600 !important;
     }
     
-    /* Markdown text */
-    .stMarkdown p {
-        color: #cbd5e1;
+    /* ===================== MARKDOWN & TEXT ===================== */
+    .stMarkdown, .stMarkdown p, .stMarkdown span {
+        color: #475569 !important;
     }
     
-    /* Expander */
+    /* ===================== EXPANDERS ===================== */
     .streamlit-expanderHeader {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        color: #e2e8f0;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        color: #1e3a5f !important;
     }
     
-    /* Dataframe */
+    details[data-testid="stExpander"] summary span {
+        color: #1e3a5f !important;
+    }
+    
+    /* ===================== DATAFRAMES ===================== */
     .stDataFrame {
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #334155;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        border: 1px solid #e2e8f0 !important;
     }
     
-    /* Divider */
+    .stDataFrame table, .stDataFrame th, .stDataFrame td {
+        background-color: #ffffff !important;
+        color: #1e3a5f !important;
+    }
+    
+    /* ===================== DIVIDERS ===================== */
     hr {
-        border-color: #475569;
+        border-color: #cbd5e1 !important;
     }
     
-    /* ===================== DARK MODE OVERRIDES ===================== */
+    /* ===================== INPUTS ===================== */
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div,
+    .stTextInput > div > div {
+        background-color: #ffffff !important;
+        color: #1e3a5f !important;
+        border-color: #e2e8f0 !important;
+    }
+    
+    /* ===================== PLOTLY CHARTS ===================== */
+    .js-plotly-plot text {
+        fill: #1e3a5f !important;
+    }
+    
+    .js-plotly-plot .gtitle {
+        fill: #1e3a5f !important;
+    }
+    
+    /* ===================== FORCE LIGHT MODE IN DARK THEME ===================== */
     [data-theme="dark"] {
-        --primary-background-color: #0f172a !important;
-        --secondary-background-color: #1e293b !important;
-        --st-border-color: #334155 !important;
-        --st-font-color: #f1f5f9 !important;
+        --primary-background-color: #f8fafc !important;
+        --secondary-background-color: #ffffff !important;
+        --st-border-color: #e2e8f0 !important;
+        --st-font-color: #1e3a5f !important;
     }
 
-    /* App background - Dark */
     [data-theme="dark"] .stApp {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-        color: #f1f5f9 !important;
+        background-color: #f8fafc !important;
+        color: #1e3a5f !important;
     }
 
-    /* Headers & Markdown text - Light */
-    [data-theme="dark"] h1, 
-    [data-theme="dark"] h2, 
-    [data-theme="dark"] h3, 
-    [data-theme="dark"] .stMarkdown p {
-        color: #f1f5f9 !important;
+    [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+    [data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 {
+        color: #1e3a5f !important;
+    }
+    
+    [data-theme="dark"] .stMarkdown, [data-theme="dark"] .stMarkdown p, [data-theme="dark"] .stMarkdown span {
+        color: #475569 !important;
     }
 
-    /* Metric cards - Dark glassmorphism */
     [data-theme="dark"] div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-        border: 1px solid #475569 !important;
-        border-left: 4px solid #06b6d4 !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 4px solid #1e3a5f !important;
     }
 
     [data-theme="dark"] div[data-testid="metric-container"] label {
-        color: #94a3b8 !important;
+        color: #64748b !important;
     }
 
     [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #f1f5f9 !important;
+        color: #1e3a5f !important;
+    }
+    
+    [data-theme="dark"] div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
+        color: #475569 !important;
     }
 
-    /* Sidebar - Dark */
     [data-theme="dark"] section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+        background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%) !important;
         border-right: 1px solid #334155 !important;
     }
 
-    [data-theme="dark"] section[data-testid="stSidebar"] label,
-    [data-theme="dark"] section[data-testid="stSidebar"] h1,
-    [data-theme="dark"] section[data-testid="stSidebar"] h2,
-    [data-theme="dark"] section[data-testid="stSidebar"] h3 {
+    [data-theme="dark"] section[data-testid="stSidebar"] * {
         color: #e2e8f0 !important;
     }
 
-    /* Expanders - Dark */
     [data-theme="dark"] .streamlit-expanderHeader {
-        background: #1e293b !important;
-        border: 1px solid #334155 !important;
-        color: #e2e8f0 !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #1e3a5f !important;
+    }
+    
+    [data-theme="dark"] details[data-testid="stExpander"] summary span {
+        color: #1e3a5f !important;
     }
 
-    /* Dataframe - Dark */
     [data-theme="dark"] .stDataFrame {
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #334155 !important;
-        background-color: #1e293b !important;
-        color: #f1f5f9 !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    
+    [data-theme="dark"] .stDataFrame table, [data-theme="dark"] .stDataFrame th, [data-theme="dark"] .stDataFrame td {
+        background-color: #ffffff !important;
+        color: #1e3a5f !important;
     }
 
-    /* Divider */
     [data-theme="dark"] hr {
-        border-color: #475569 !important;
+        border-color: #cbd5e1 !important;
+    }
+    
+    [data-theme="dark"] .stSelectbox > div > div,
+    [data-theme="dark"] .stMultiSelect > div > div,
+    [data-theme="dark"] .stTextInput > div > div {
+        background-color: #ffffff !important;
+        color: #1e3a5f !important;
+        border-color: #e2e8f0 !important;
     }
 
-    /* Plotly charts: light text */
     [data-theme="dark"] .js-plotly-plot text {
-        fill: #f1f5f9 !important;
+        fill: #1e3a5f !important;
+    }
+    
+    [data-theme="dark"] .js-plotly-plot .gtitle {
+        fill: #1e3a5f !important;
     }
 </style>
 """, unsafe_allow_html=True)
