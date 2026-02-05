@@ -653,7 +653,8 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #6b7280; font-size: 0.85rem; padding: 20px;'>
-        Data Source: Sri Lanka Census 2024 (Provisional) | Built with Streamlit & Plotly
+        Data Source: Sri Lanka Census 2024 (Provisional) | Built with Streamlit & Plotly<br>
+        <span style='color: #1e3a5f; font-weight: 500;'>Author: Vithjeshayan S</span>
     </div>
     """, unsafe_allow_html=True)
 
