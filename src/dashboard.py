@@ -25,8 +25,10 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     /* Main background */
+    /* Main background */
     .stApp {
-        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+        background-color: #f8fafc;
+        /* Gradient removed to prevent banding issues */
         font-family: 'Inter', sans-serif;
     }
     
@@ -490,7 +492,7 @@ def main():
             x='District',
             y='Total_Population',
             color='Sex_Ratio',
-            color_continuous_scale='RdYlBu',
+            color_continuous_scale='Viridis',
             labels={'Total_Population': 'Population', 'Sex_Ratio': 'Sex Ratio'}
         )
         fig_breakdown.update_layout(
@@ -544,7 +546,7 @@ def main():
             x='Total_Population',
             orientation='h',
             color='Total_Population',
-            color_continuous_scale='Blues'
+            color_continuous_scale='Viridis'
         )
         fig_province.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
