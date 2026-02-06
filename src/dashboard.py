@@ -13,7 +13,7 @@ import json
 # --- Page Configuration ---
 st.set_page_config(
     page_title="Sri Lanka Census 2024 Dashboard",
-    page_icon="🇱🇰",
+    page_icon="https://e7.pngegg.com/pngimages/944/386/png-clipart-government-of-sri-lanka-government-gazette-indonesia-sri-lanka-relations-others-logo-republic-thumbnail.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
