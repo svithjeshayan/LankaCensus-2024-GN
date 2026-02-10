@@ -263,6 +263,29 @@ def load_geojson():
         district = str(props.get('District_Name', '')).upper().strip()
         gn_name = str(props.get('shapeName', '')).upper().strip()
         props['District_GN_Key'] = district + '|' + gn_name
+    
+    # Deduplicate: the GeoJSON has ~7,000 duplicate features (same GN division
+    # with different polygon geometries/shapeIDs). Keep only the feature with the
+    # most vertices per key to get the most detailed boundary representation.
+    def _vertex_count(feature):
+        geom = feature.get('geometry')
+        if not geom or not geom.get('coordinates'):
+            return 0
+        coords = geom['coordinates']
+        if geom['type'] == 'Polygon':
+            return sum(len(ring) for ring in coords)
+        elif geom['type'] == 'MultiPolygon':
+            return sum(len(ring) for poly in coords for ring in poly)
+        return 0
+    
+    seen = {}
+    for feature in data['features']:
+        key = feature['properties']['District_GN_Key']
+        vc = _vertex_count(feature)
+        if key not in seen or vc > _vertex_count(seen[key]):
+            seen[key] = feature
+    
+    data['features'] = list(seen.values())
              
     return data
 
