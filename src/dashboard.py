@@ -347,6 +347,34 @@ def main():
     if selected_ds:
         filtered_df = filtered_df[filtered_df['DS_Division'].isin(selected_ds)]
     
+    # --- Determine display population based on gender/age filters ---
+    # Map age group labels to column names
+    age_group_col_map = {
+        "0-14 (Youth)": "Age_0_14",
+        "15-59 (Working)": "Age_15_59",
+        "60-64": "Age_60_64",
+        "65+ (Elderly)": "Age_65_Plus"
+    }
+    
+    # Calculate the "display population" based on filters
+    if selected_age_groups:
+        # Sum only selected age group columns
+        age_cols = [age_group_col_map[ag] for ag in selected_age_groups]
+        filtered_df['Display_Population'] = filtered_df[age_cols].sum(axis=1)
+    else:
+        # Use total population when no age filter
+        filtered_df['Display_Population'] = filtered_df['Total_Population']
+    
+    # Apply gender filter (note: gender breakdown by age is not in the dataset, 
+    # so this applies to age "All" or as an approximate indicator)
+    if selected_gender == "Male":
+        # When age groups selected, we can only approximate since we don't have gender x age breakdown
+        if not selected_age_groups:
+            filtered_df['Display_Population'] = filtered_df['Male']
+    elif selected_gender == "Female":
+        if not selected_age_groups:
+            filtered_df['Display_Population'] = filtered_df['Female']
+    
     # --- Key Metrics Row ---
     st.markdown("### 📈 Key Metrics")
     
@@ -354,6 +382,7 @@ def main():
     total_male = filtered_df['Male'].sum()
     total_female = filtered_df['Female'].sum()
     total_pop = filtered_df['Total_Population'].sum()
+    display_pop = filtered_df['Display_Population'].sum()
     
     # Age group sums
     age_0_14 = filtered_df['Age_0_14'].sum()
@@ -361,10 +390,21 @@ def main():
     age_60_64 = filtered_df['Age_60_64'].sum()
     age_65_plus = filtered_df['Age_65_Plus'].sum()
     
+    # Determine metric labels based on filters
+    pop_label = "Total Population"
+    if selected_age_groups:
+        age_labels = [ag.split(" ")[0] for ag in selected_age_groups]  # Get just the age range
+        pop_label = f"Population ({', '.join(age_labels)})"
+    if selected_gender != "All":
+        pop_label = f"{selected_gender} {pop_label}"
+    
     # Display Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric(label="Total Population", value=f"{total_pop:,.0f}")
+        # Show filtered population as primary metric
+        pct_of_total = (display_pop / total_pop * 100) if total_pop > 0 else 0
+        delta_str = f"{pct_of_total:.1f}% of total" if (selected_age_groups or selected_gender != "All") else None
+        st.metric(label=pop_label, value=f"{display_pop:,.0f}", delta=delta_str)
     with col2:
         st.metric(label="Male Population", value=f"{total_male:,.0f}", delta=f"{(total_male/total_pop)*100:.1f}%" if total_pop > 0 else "0%")
     with col3:
@@ -384,6 +424,11 @@ def main():
     # Pre-calculate Figures to separate logic from layout
     
     # 1. Gender Donut
+    # Note: Dataset doesn't have gender x age breakdown, so gender chart shows totals
+    gender_note = None
+    if selected_age_groups:
+        gender_note = "⚠️ Gender data is for all ages (breakdown by age not available)"
+    
     labels = ['Male', 'Female']
     values = [total_male, total_female]
     fig_gender = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=['#0ea5e9', '#ec4899'])])
@@ -397,10 +442,26 @@ def main():
     )
 
     # 2. Population Structure (Pyramid or Bar)
+    # Determine which age groups are selected for highlighting
+    selected_age_labels = [ag.split(" ")[0] for ag in selected_age_groups] if selected_age_groups else []
+    
+    # Set colors - highlight selected, dim others
+    default_colors = ['#6366f1', '#10b981', '#f59e0b', '#64748b']
+    age_labels = ['0-14', '15-59', '60-64', '65+']
+    
+    if selected_age_groups:
+        # Highlight selected age groups, dim unselected
+        colors = [
+            default_colors[i] if age_labels[i] in selected_age_labels else '#d1d5db'
+            for i in range(4)
+        ]
+    else:
+        colors = default_colors
+    
     age_df = pd.DataFrame({
-        'Age Group': ['0-14', '15-59', '60-64', '65+'],
+        'Age Group': age_labels,
         'Population': [age_0_14, age_15_59, age_60_64, age_65_plus],
-        'Color': ['#6366f1', '#10b981', '#f59e0b', '#64748b']
+        'Selected': [label in selected_age_labels for label in age_labels] if selected_age_groups else [True]*4
     })
     
     fig_age = px.bar(
@@ -409,7 +470,7 @@ def main():
         y='Age Group',
         orientation='h',
         color='Age Group',
-        color_discrete_sequence=['#6366f1', '#10b981', '#f59e0b', '#64748b'],
+        color_discrete_sequence=colors,
         text='Population'
     )
     fig_age.update_layout(
@@ -457,13 +518,13 @@ def main():
                 geojson=geojson,
                 locations='GN_Link_Key',
                 featureidkey="properties.shapeName_upper",
-                color='Total_Population',
+                color='Display_Population',
                 mapbox_style="carto-positron",
                 zoom=zoom,
                 center={"lat": center_lat, "lon": center_lon},
-                opacity=0.6,
-                labels={'Total_Population': 'Pop'},
-                color_continuous_scale="Viridis",
+                opacity=0.7,
+                labels={'Display_Population': 'Population'},
+                color_continuous_scale="RdYlGn_r",  # Green (low) to Red (high) density
             )
             fig_map.update_layout(
                 margin={"r":0,"t":0,"l":0,"b":0},
@@ -473,6 +534,8 @@ def main():
             
         with col_right:
             st.markdown("### ⚧ Gender Dist.")
+            if gender_note:
+                st.caption(gender_note)
             st.plotly_chart(fig_gender, use_container_width=True)
             
         # Age Structure (Full Width below Map/Gender)
@@ -487,6 +550,8 @@ def main():
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("### ⚧ Gender Distribution")
+            if gender_note:
+                st.caption(gender_note)
             st.plotly_chart(fig_gender, use_container_width=True)
         with c2:
             st.markdown("### 👥 Age Structure")
@@ -506,20 +571,21 @@ def main():
         st.markdown(f"### 📊 District Breakdown in {province_names}")
         
         breakdown = filtered_df.groupby('District').agg({
+            'Display_Population': 'sum',
             'Total_Population': 'sum',
             'Male': 'sum',
             'Female': 'sum',
             'Sex_Ratio': 'mean',
             'Dependency_Ratio': 'mean'
-        }).reset_index().sort_values('Total_Population', ascending=False)
+        }).reset_index().sort_values('Display_Population', ascending=False)
         
         fig_breakdown = px.bar(
             breakdown,
             x='District',
-            y='Total_Population',
+            y='Display_Population',
             color='Sex_Ratio',
             color_continuous_scale='Viridis',
-            labels={'Total_Population': 'Population', 'Sex_Ratio': 'Sex Ratio'}
+            labels={'Display_Population': 'Population', 'Sex_Ratio': 'Sex Ratio'}
         )
         fig_breakdown.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
@@ -536,12 +602,13 @@ def main():
         st.markdown(f"### 📊 DS Division Breakdown in {district_names}")
         
         breakdown = filtered_df.groupby('DS_Division').agg({
+            'Display_Population': 'sum',
             'Total_Population': 'sum',
             'Male': 'sum',
             'Female': 'sum',
             'Sex_Ratio': 'mean',
             'Dependency_Ratio': 'mean'
-        }).reset_index().sort_values('Total_Population', ascending=False)
+        }).reset_index().sort_values('Display_Population', ascending=False)
         
         # Limit if too many
         if len(breakdown) > 30:
@@ -551,10 +618,10 @@ def main():
         fig_breakdown = px.bar(
             breakdown,
             x='DS_Division',
-            y='Total_Population',
+            y='Display_Population',
             color='Dependency_Ratio',
             color_continuous_scale='Viridis',
-            labels={'Total_Population': 'Population', 'Dependency_Ratio': 'Dependency %'}
+            labels={'Display_Population': 'Population', 'Dependency_Ratio': 'Dependency %'}
         )
         fig_breakdown.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
@@ -586,12 +653,13 @@ def main():
         
         group_col = col_map[view_level]
         
-        # Aggregation
-        overview_data = df.groupby(group_col).agg({
+        # Aggregation - use filtered_df with Display_Population for proper filter response
+        overview_data = filtered_df.groupby(group_col).agg({
+            'Display_Population': 'sum',
             'Total_Population': 'sum',
             'Male': 'sum',
             'Female': 'sum'
-        }).reset_index().sort_values('Total_Population', ascending=True)
+        }).reset_index().sort_values('Display_Population', ascending=True)
         
         # Limit for DS Division to avoid overcrowding
         if view_level == "DS Division":
@@ -602,11 +670,11 @@ def main():
         fig_province = px.bar(
             overview_data,
             y=group_col,
-            x='Total_Population',
+            x='Display_Population',
             orientation='h',
-            color='Total_Population',
+            color='Display_Population',
             color_continuous_scale='Viridis',
-            labels={'Total_Population': 'Population', group_col: view_level}
+            labels={'Display_Population': 'Population', group_col: view_level}
         )
         
         fig_province.update_layout(
