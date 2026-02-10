@@ -238,8 +238,8 @@ def load_data():
     df['Dependency_Ratio'] = ((df['Age_0_14'] + df['Age_60_64'] + df['Age_65_Plus']) / df['Age_15_59'].replace(0, 1) * 100).round(1)
     
     # Create a composite key for unique GeoJSON joining (District + GN name)
-    # GN Division names are NOT unique across districts (772 duplicates), so we must
-    # include the district name to avoid cross-district polygon pollution on the map.
+    # GN Division names like 'Mallikaithivu' exist in MULTIPLE districts (Trinco & Mullaitivu).
+    # We must include District in the key to ensure the map shows the correct polygon location.
     df['GN_Link_Key'] = (df['District'].str.upper().str.strip() + '|' + df['GN_Division'].str.upper().str.strip())
     
     return df
@@ -257,35 +257,13 @@ def load_geojson():
         data = json.load(f)
     
     # Create composite key in GeoJSON to match dataframe (District + GN name)
-    # This prevents cross-district polygon matching when GN names are duplicated
+    # This prevents the map from picking the wrong polygon (e.g. picking Mullaitivu's 'Mallikaithivu'
+    # when you selected Trincomalee)
     for feature in data['features']:
         props = feature['properties']
         district = str(props.get('District_Name', '')).upper().strip()
         gn_name = str(props.get('shapeName', '')).upper().strip()
         props['District_GN_Key'] = district + '|' + gn_name
-    
-    # Deduplicate: the GeoJSON has ~7,000 duplicate features (same GN division
-    # with different polygon geometries/shapeIDs). Keep only the feature with the
-    # most vertices per key to get the most detailed boundary representation.
-    def _vertex_count(feature):
-        geom = feature.get('geometry')
-        if not geom or not geom.get('coordinates'):
-            return 0
-        coords = geom['coordinates']
-        if geom['type'] == 'Polygon':
-            return sum(len(ring) for ring in coords)
-        elif geom['type'] == 'MultiPolygon':
-            return sum(len(ring) for poly in coords for ring in poly)
-        return 0
-    
-    seen = {}
-    for feature in data['features']:
-        key = feature['properties']['District_GN_Key']
-        vc = _vertex_count(feature)
-        if key not in seen or vc > _vertex_count(seen[key]):
-            seen[key] = feature
-    
-    data['features'] = list(seen.values())
              
     return data
 
