@@ -237,8 +237,10 @@ def load_data():
     df['Elderly_Pct'] = ((df['Age_60_64'] + df['Age_65_Plus']) / df['Total_Population'].replace(0, 1) * 100).round(1)
     df['Dependency_Ratio'] = ((df['Age_0_14'] + df['Age_60_64'] + df['Age_65_Plus']) / df['Age_15_59'].replace(0, 1) * 100).round(1)
     
-    # Create a normalized column for joining
-    df['GN_Link_Key'] = df['GN_Division'].str.upper().str.strip()
+    # Create a composite key for unique GeoJSON joining (District + GN name)
+    # GN Division names are NOT unique across districts (772 duplicates), so we must
+    # include the district name to avoid cross-district polygon pollution on the map.
+    df['GN_Link_Key'] = (df['District'].str.upper().str.strip() + '|' + df['GN_Division'].str.upper().str.strip())
     
     return df
 
@@ -254,11 +256,13 @@ def load_geojson():
     with open(geojson_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    # Normalize keys in GeoJSON to match dataframe
+    # Create composite key in GeoJSON to match dataframe (District + GN name)
+    # This prevents cross-district polygon matching when GN names are duplicated
     for feature in data['features']:
-        if 'shapeName' in feature['properties']:
-             # Create a standardized key in properties for linking
-             feature['properties']['shapeName_upper'] = str(feature['properties']['shapeName']).upper().strip()
+        props = feature['properties']
+        district = str(props.get('District_Name', '')).upper().strip()
+        gn_name = str(props.get('shapeName', '')).upper().strip()
+        props['District_GN_Key'] = district + '|' + gn_name
              
     return data
 
@@ -517,7 +521,7 @@ def main():
                 filtered_df,
                 geojson=geojson,
                 locations='GN_Link_Key',
-                featureidkey="properties.shapeName_upper",
+                featureidkey="properties.District_GN_Key",
                 color='Display_Population',
                 mapbox_style="carto-positron",
                 zoom=zoom,
