@@ -256,11 +256,10 @@ def load_geojson():
     with open(geojson_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    # --- Spatial Validity Check ---
-    # The GeoJSON contains "lying" records: 
-    # 1. Duplicate geometries (ShapeID & coords) across districts (e.g. Mallikaithivu).
-    # 2. Unique geometries labeled with wrong district (e.g. Nachchikuda labeled Trinco but is in Kilinochchi).
-    # We must filter these out based on physical proximity to the district center.
+    # --- Spatial Conflict Resolution ---
+    # The GeoJSON contains "lying" records: identical geometries (ShapeID & coords) duplicated
+    # across districts. e.g. Mallikaithivu exists as "Trincomalee" but uses "Mullaitivu"
+    # geometry. We must filter these out based on physical proximity to the district center.
 
     # 1. Calculate approximate centroid for each feature
     def get_centroid(feature):
@@ -315,44 +314,47 @@ def load_geojson():
             avg_lon = sum(p[1] for p in points) / len(points)
             district_centers[dist] = (avg_lat, avg_lon)
 
-    # 4. Filter "Lying" Records (Strict Spatial Check)
-    # Reject if: Dist(Claimed) > 2.0 * Dist(Closest) AND Dist(Claimed) > 0.1
+    # 4. Filter "Lying" Records
+    # If a feature is claimed by multiple districts (same ShapeID), assign it ONLY
+    # to the district its centroid is closest to.
     
     validated_features = []
     
     for i, feature in enumerate(data['features']):
         props = feature['properties']
+        sid = props.get('shapeID')
         claimed_dist = str(props.get('District_Name', '')).upper().strip()
         gn_name = str(props.get('shapeName', '')).upper().strip()
         
         # Default: accept the feature
         is_valid = True
         
-        cent = feature_centroids.get(i)
-        
-        # Perform check if we have geometry and district info
-        if cent and claimed_dist in district_centers:
-            # Simple squared euclidean distance
-            def dist_sq(p1, p2): return (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2
-            
-            my_dist = dist_sq(cent, district_centers[claimed_dist])
-            
-            # Find closest district
-            min_dist = float('inf')
-            closest_dist = None
-            
-            for d, dc in district_centers.items():
-                d_k = dist_sq(cent, dc)
-                if d_k < min_dist:
-                    min_dist = d_k
-                    closest_dist = d
-            
-            # Strict Validity Check
-            # 1. Is it significantly closer to another district? (Ratio > 2.0)
-            # 2. Is it objectively far from claimed district? (Dist > 0.1 deg^2 ~ 35km radius error)
-            # Threshold 0.1 covers border inaccuracies. Ratio 2.0 protects equidistant border towns.
-            if closest_dist and closest_dist != claimed_dist:
-                if my_dist > (2.0 * min_dist) and my_dist > 0.1:
+        # Check conflict
+        if sid and len(shape_to_districts.get(sid, [])) > 1:
+            # It's a conflict! (e.g. Mallikaithivu claimed by Trincomalee & Mullaitivu)
+            cent = feature_centroids.get(i)
+            if cent and claimed_dist in district_centers:
+                # Compare distance to claimed district vs competing districts
+                # Simple squared euclidean distance is sufficient
+                def dist_sq(p1, p2): return (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2
+                
+                my_dist = dist_sq(cent, district_centers[claimed_dist])
+                
+                # Check neighbors
+                competitors = shape_to_districts[sid]
+                better_claimant = None
+                
+                for comp in competitors:
+                    if comp != claimed_dist and comp in district_centers:
+                        comp_dist = dist_sq(cent, district_centers[comp])
+                        # If significantly closer to another district, this record is a lie
+                        if comp_dist < my_dist:
+                            better_claimant = comp
+                            break
+                            
+                if better_claimant:
+                    # This polygon is physically closer to another district's center
+                    # So the claim that it is in 'claimed_dist' is false (copy-paste error)
                     is_valid = False
 
         if is_valid:
