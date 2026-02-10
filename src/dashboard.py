@@ -256,15 +256,102 @@ def load_geojson():
     with open(geojson_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    # Create composite key in GeoJSON to match dataframe (District + GN name)
-    # This prevents the map from picking the wrong polygon (e.g. picking Mullaitivu's 'Mallikaithivu'
-    # when you selected Trincomalee)
-    for feature in data['features']:
+    # --- Spatial Cleaning Step ---
+    # The GeoJSON contains ~700 cases where identical geometries are duplicated across districts 
+    # (e.g., a Polygon in Mullaitivu is also labeled as existing in Trincomalee).
+    # We resolve this by assigning each unique geometry to the District whose spatial center is closest.
+
+    # 1. Helper to calculate approximate centroid
+    def get_centroid(coords, geom_type):
+        if not coords: return None
+        if geom_type == 'Polygon':
+            # Avg of first ring
+            if not coords[0]: return None
+            try:
+                avg_lon = sum(p[0] for p in coords[0])/len(coords[0])
+                avg_lat = sum(p[1] for p in coords[0]) / len(coords[0])
+                return (avg_lon, avg_lat)
+            except: 
+                return None
+        elif geom_type == 'MultiPolygon':
+            # Centroid of largest polygon
+            try:
+                largest = max(coords, key=lambda p: len(p[0]) if p and p[0] else 0)
+                return get_centroid(largest, 'Polygon')
+            except:
+                return None
+        return None
+
+    # 2. Calculate District Centers and group identical geometries
+    district_coords = {} # dist_name -> list of centroids
+    geom_map = {} # geom_str -> list of (feature_index, district_name, centroid)
+    
+    for i, ft in enumerate(data['features']):
+        props = ft['properties']
+        dist = str(props.get('District_Name', '')).upper().strip()
+        if not dist or dist == 'NONE': continue
+        
+        geom = ft.get('geometry')
+        if not geom: continue
+        
+        c = get_centroid(geom['coordinates'], geom['type'])
+        if c:
+            if dist not in district_coords: district_coords[dist] = []
+            district_coords[dist].append(c)
+            
+            # Group by geometry string (exact match)
+            g_str = str(geom['coordinates'])
+            if g_str not in geom_map: geom_map[g_str] = []
+            geom_map[g_str].append((i, dist, c))
+
+    # Calculate district centers (averages)
+    district_centers = {}
+    for dist, coords in district_coords.items():
+        if coords:
+            district_centers[dist] = (sum(c[0] for c in coords)/len(coords), sum(c[1] for c in coords)/len(coords))
+
+    # 3. Resolve conflicts (Identical geometries in different districts)
+    indices_to_remove = set()
+    
+    for g_str, entries in geom_map.items():
+        if len(entries) > 1:
+            districts = set(e[1] for e in entries)
+            if len(districts) > 1:
+                # Collision detected! Find best district
+                c = entries[0][2] # Use first centroid (identical)
+                
+                best_dist = None
+                min_dist = float('inf')
+                
+                for dist in districts:
+                    if dist in district_centers:
+                        center = district_centers[dist]
+                        d = ((c[0]-center[0])**2 + (c[1]-center[1])**2)**0.5
+                        if d < min_dist:
+                            min_dist = d
+                            best_dist = dist
+                
+                # Mark features from non-best districts for removal
+                if best_dist:
+                    for i, dist, _ in entries:
+                        if dist != best_dist:
+                            indices_to_remove.add(i)
+
+    # 4. Filter features and add keys
+    cleaned_features = []
+    for i, feature in enumerate(data['features']):
+        if i in indices_to_remove: 
+            continue
+            
         props = feature['properties']
         district = str(props.get('District_Name', '')).upper().strip()
         gn_name = str(props.get('shapeName', '')).upper().strip()
+        
+        # Create composite key
         props['District_GN_Key'] = district + '|' + gn_name
-             
+        cleaned_features.append(feature)
+
+    data['features'] = cleaned_features
     return data
 
 # --- Main App ---
