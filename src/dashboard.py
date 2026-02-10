@@ -313,6 +313,7 @@ def load_geojson():
     # 3. Resolve conflicts (Identical geometries in different districts)
     indices_to_remove = set()
     
+    # Pass 1: Identical Geometry Collisions
     for g_str, entries in geom_map.items():
         if len(entries) > 1:
             districts = set(e[1] for e in entries)
@@ -336,6 +337,36 @@ def load_geojson():
                     for i, dist, _ in entries:
                         if dist != best_dist:
                             indices_to_remove.add(i)
+
+    # Pass 2: Spatial Outlier Check (Gross errors)
+    # Even if unique, a feature might be assigned to Trincomalee but physically located in Mannar.
+    # Logic: If distance to Assigned District > Distance to Closest District + Buffer (0.2 deg ~ 22km), remove it.
+    buffer_deg = 0.2
+    
+    for i, ft in enumerate(data['features']):
+        if i in indices_to_remove: continue
+        
+        props = ft['properties']
+        assigned_dist = str(props.get('District_Name', '')).upper().strip()
+        geom = ft.get('geometry')
+        if not geom: continue
+        
+        c = get_centroid(geom['coordinates'], geom['type'])
+        if not c or assigned_dist not in district_centers: continue
+        
+        dist_to_assigned = ((c[0]-district_centers[assigned_dist][0])**2 + (c[1]-district_centers[assigned_dist][1])**2)**0.5
+        
+        # Check against all other districts
+        min_other_dist = float('inf')
+        for d_name, d_center in district_centers.items():
+            if d_name == assigned_dist: continue
+            d = ((c[0]-d_center[0])**2 + (c[1]-d_center[1])**2)**0.5
+            if d < min_other_dist:
+                min_other_dist = d
+        
+        # If substantially closer to another district, it's likely a labeling error in source data
+        if dist_to_assigned > (min_other_dist + buffer_deg):
+            indices_to_remove.add(i)
 
     # 4. Filter features and add keys
     cleaned_features = []
