@@ -256,133 +256,115 @@ def load_geojson():
     with open(geojson_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    # --- Spatial Cleaning Step ---
-    # The GeoJSON contains ~700 cases where identical geometries are duplicated across districts 
-    # (e.g., a Polygon in Mullaitivu is also labeled as existing in Trincomalee).
-    # We resolve this by assigning each unique geometry to the District whose spatial center is closest.
+    # --- Spatial Conflict Resolution ---
+    # The GeoJSON contains "lying" records: identical geometries (ShapeID & coords) duplicated
+    # across districts. e.g. Mallikaithivu exists as "Trincomalee" but uses "Mullaitivu"
+    # geometry. We must filter these out based on physical proximity to the district center.
 
-    # 1. Helper to calculate approximate centroid
-    def get_centroid(coords, geom_type):
-        if not coords: return None
-        if geom_type == 'Polygon':
-            # Avg of first ring
-            if not coords[0]: return None
-            try:
-                avg_lon = sum(p[0] for p in coords[0])/len(coords[0])
-                avg_lat = sum(p[1] for p in coords[0]) / len(coords[0])
-                return (avg_lon, avg_lat)
-            except: 
-                return None
-        elif geom_type == 'MultiPolygon':
-            # Centroid of largest polygon
-            try:
-                largest = max(coords, key=lambda p: len(p[0]) if p and p[0] else 0)
-                return get_centroid(largest, 'Polygon')
-            except:
-                return None
-        return None
+    # 1. Calculate approximate centroid for each feature
+    def get_centroid(feature):
+        geom = feature.get('geometry')
+        if not geom or not geom.get('coordinates'):
+            return None
+        coords = geom['coordinates']
+        # For Polygon, coords[0] is outer ring. For MultiPolygon, coords[0][0] is outer ring of first poly.
+        ring = coords[0] if geom['type'] == 'Polygon' else coords[0][0]
+        # Avg of ring vertices is good enough approx for district assignment
+        lons = [p[0] for p in ring]
+        lats = [p[1] for p in ring]
+        return (sum(lats)/len(lats), sum(lons)/len(lons))
 
-    # 2. Calculate District Centers and group identical geometries
-    district_coords = {} # dist_name -> list of centroids
-    geom_map = {} # geom_str -> list of (feature_index, district_name, centroid)
+    # 2. Collect reliable centroids to determine District Centers
+    # A feature is "reliable" if its ShapeID is unique to one District
+    shape_to_districts = {} 
+    feature_centroids = {}
     
-    for i, ft in enumerate(data['features']):
-        props = ft['properties']
-        dist = str(props.get('District_Name', '')).upper().strip()
-        if not dist or dist == 'NONE': continue
-        
-        geom = ft.get('geometry')
-        if not geom: continue
-        
-        c = get_centroid(geom['coordinates'], geom['type'])
-        if c:
-            if dist not in district_coords: district_coords[dist] = []
-            district_coords[dist].append(c)
-            
-            # Group by geometry string (exact match)
-            g_str = str(geom['coordinates'])
-            if g_str not in geom_map: geom_map[g_str] = []
-            geom_map[g_str].append((i, dist, c))
-
-    # Calculate district centers (averages)
-    district_centers = {}
-    for dist, coords in district_coords.items():
-        if coords:
-            district_centers[dist] = (sum(c[0] for c in coords)/len(coords), sum(c[1] for c in coords)/len(coords))
-
-    # 3. Resolve conflicts (Identical geometries in different districts)
-    indices_to_remove = set()
-    
-    # Pass 1: Identical Geometry Collisions
-    for g_str, entries in geom_map.items():
-        if len(entries) > 1:
-            districts = set(e[1] for e in entries)
-            if len(districts) > 1:
-                # Collision detected! Find best district
-                c = entries[0][2] # Use first centroid (identical)
-                
-                best_dist = None
-                min_dist = float('inf')
-                
-                for dist in districts:
-                    if dist in district_centers:
-                        center = district_centers[dist]
-                        d = ((c[0]-center[0])**2 + (c[1]-center[1])**2)**0.5
-                        if d < min_dist:
-                            min_dist = d
-                            best_dist = dist
-                
-                # Mark features from non-best districts for removal
-                if best_dist:
-                    for i, dist, _ in entries:
-                        if dist != best_dist:
-                            indices_to_remove.add(i)
-
-    # Pass 2: Spatial Outlier Check (Gross errors)
-    # Even if unique, a feature might be assigned to Trincomalee but physically located in Mannar.
-    # Logic: If distance to Assigned District > Distance to Closest District + Buffer (0.2 deg ~ 22km), remove it.
-    buffer_deg = 0.2
-    
-    for i, ft in enumerate(data['features']):
-        if i in indices_to_remove: continue
-        
-        props = ft['properties']
-        assigned_dist = str(props.get('District_Name', '')).upper().strip()
-        geom = ft.get('geometry')
-        if not geom: continue
-        
-        c = get_centroid(geom['coordinates'], geom['type'])
-        if not c or assigned_dist not in district_centers: continue
-        
-        dist_to_assigned = ((c[0]-district_centers[assigned_dist][0])**2 + (c[1]-district_centers[assigned_dist][1])**2)**0.5
-        
-        # Check against all other districts
-        min_other_dist = float('inf')
-        for d_name, d_center in district_centers.items():
-            if d_name == assigned_dist: continue
-            d = ((c[0]-d_center[0])**2 + (c[1]-d_center[1])**2)**0.5
-            if d < min_other_dist:
-                min_other_dist = d
-        
-        # If substantially closer to another district, it's likely a labeling error in source data
-        if dist_to_assigned > (min_other_dist + buffer_deg):
-            indices_to_remove.add(i)
-
-    # 4. Filter features and add keys
-    cleaned_features = []
     for i, feature in enumerate(data['features']):
-        if i in indices_to_remove: 
-            continue
-            
         props = feature['properties']
-        district = str(props.get('District_Name', '')).upper().strip()
+        sid = props.get('shapeID')
+        dist = str(props.get('District_Name', '')).upper().strip()
+        
+        if sid and dist and dist != 'NONE':
+            if sid not in shape_to_districts:
+                shape_to_districts[sid] = set()
+            shape_to_districts[sid].add(dist)
+            
+            cent = get_centroid(feature)
+            if cent:
+                feature_centroids[i] = cent
+
+    # 3. Compute District Centers (Average of uncontested centroids)
+    district_centers = {}
+    district_points = {}
+    
+    for i, feature in enumerate(data['features']):
+        props = feature['properties']
+        sid = props.get('shapeID')
+        dist = str(props.get('District_Name', '')).upper().strip()
+        
+        # Only use uncontested shapes for the district center
+        if sid and dist and len(shape_to_districts.get(sid, [])) == 1:
+            if i in feature_centroids:
+                if dist not in district_points: district_points[dist] = []
+                district_points[dist].append(feature_centroids[i])
+
+    for dist, points in district_points.items():
+        if points:
+            avg_lat = sum(p[0] for p in points) / len(points)
+            avg_lon = sum(p[1] for p in points) / len(points)
+            district_centers[dist] = (avg_lat, avg_lon)
+
+    # 4. Filter "Lying" Records
+    # If a feature is claimed by multiple districts (same ShapeID), assign it ONLY
+    # to the district its centroid is closest to.
+    
+    validated_features = []
+    
+    for i, feature in enumerate(data['features']):
+        props = feature['properties']
+        sid = props.get('shapeID')
+        claimed_dist = str(props.get('District_Name', '')).upper().strip()
         gn_name = str(props.get('shapeName', '')).upper().strip()
         
-        # Create composite key
-        props['District_GN_Key'] = district + '|' + gn_name
-        cleaned_features.append(feature)
+        # Default: accept the feature
+        is_valid = True
+        
+        # Check conflict
+        if sid and len(shape_to_districts.get(sid, [])) > 1:
+            # It's a conflict! (e.g. Mallikaithivu claimed by Trincomalee & Mullaitivu)
+            cent = feature_centroids.get(i)
+            if cent and claimed_dist in district_centers:
+                # Compare distance to claimed district vs competing districts
+                # Simple squared euclidean distance is sufficient
+                def dist_sq(p1, p2): return (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2
+                
+                my_dist = dist_sq(cent, district_centers[claimed_dist])
+                
+                # Check neighbors
+                competitors = shape_to_districts[sid]
+                better_claimant = None
+                
+                for comp in competitors:
+                    if comp != claimed_dist and comp in district_centers:
+                        comp_dist = dist_sq(cent, district_centers[comp])
+                        # If significantly closer to another district, this record is a lie
+                        if comp_dist < my_dist:
+                            better_claimant = comp
+                            break
+                            
+                if better_claimant:
+                    # This polygon is physically closer to another district's center
+                    # So the claim that it is in 'claimed_dist' is false (copy-paste error)
+                    is_valid = False
 
-    data['features'] = cleaned_features
+        if is_valid:
+            # Generate the key only for valid features
+            props['District_GN_Key'] = claimed_dist + '|' + gn_name
+            validated_features.append(feature)
+            
+    # Update data with filtered features
+    data['features'] = validated_features
+             
     return data
 
 # --- Main App ---
