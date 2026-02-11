@@ -1,5 +1,0 @@
-Total CSV GN Codes: 154
-Total GeoJSON Features: 20895
-Overlap on shapeISO (Code): 0
-Overlap on shapeName (Name): 11744
-Sample Prop: {'shapeName': '04 1/2 Kanuwa', 'shapeISO': '', 'shapeID': '91002919B9666291956697', 'shapeGroup': 'LKA', 'shapeType': 'ADM4', 'shapeName_clean': '04 1/2 KANUWA', 'Province_Code': None, 'Province_Name': None, 'District_Code': None, 'District_Name': None, 'DS_Division_Code': None, 'DS_Division_Name': None, 'GN_Division_Code': None, 'GN_Division_Name': None, 'GN_Division_Number': None, 'Sex_Total': None, 'Sex_Male': None, 'Sex_Female': None, 'Age_Total': None, 'Age_0_to_14': None, 'Age_15_to_59': None, 'Age_60_to_64': None, 'Age_65_and_above': None, 'Sex_Ratio': None, 'Child_Dependency_Ratio': None, 'Old_Age_Dependency_Ratio': None, 'Total_Dependency_Ratio': None, 'Cluster': None, 'Profile': None, 'School_Priority': None, 'ElderCare_Priority': None, 'GN_clean': None}

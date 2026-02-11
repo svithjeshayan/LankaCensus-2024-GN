@@ -1,0 +1,53 @@
+--- 🇱🇰 EXECUTIVE INTELLIGENCE REPORT: CENSUS 2024 ---
+
+WARNING: Top 5 'Aging Crisis' Districts (Highest Aging Index)
+District_Name  Aging_Index  Old_Age_Dependency  Pop_60_Plus
+      Colombo   119.291324           30.314868       438701
+      Kegalle   107.049070           35.546263       183359
+      Gampaha   104.708556           29.857597       459280
+       Jaffna   100.138019           32.332101       116812
+        Galle    99.667288           33.018211       218080
+
+OPPORTUNITY: Top 5 'Future Growth Engines' (Highest Youth %)
+District_Name  Youth_Pct  Age_0_14
+  Trincomalee  26.107127    115588
+       Ampara  25.515378    189975
+   Batticaloa  24.566971    146399
+       Mannar  24.423058     30225
+   Moneragala  23.547296    124232
+
+STABILITY: Top 5 'Economic Powerhouses' (Highest Working Age %)
+District_Name  Workforce_Pct  Dependency_Ratio
+  Kilinochchi      64.699729         54.560152
+      Colombo      64.214803         55.727334
+   Mullaitivu      63.854704         56.605533
+     Vavuniya      63.438414         57.633197
+      Gampaha      63.142255         58.372550
+
+--- FULL DISTRICT DATA FOR REPORT TABLE ---
+District_Name  Total_Pop_Sex  Aging_Index  Dependency_Ratio  Youth_Pct  Workforce_Pct
+      Gampaha        2436142   104.708556         58.372550  18.004985      63.142255
+      Colombo        2253605   119.291324         55.727334  16.318565      64.214803
+   Kurunegala        1768156    94.808078         67.213214  20.633700      59.803886
+        Kandy        1461895    92.393085         68.462034  21.123131      59.360556
+     Kalutara        1305784    96.366885         61.846897  19.460110      61.786789
+    Ratnapura        1145423    91.034483         63.500823  20.330481      61.161772
+        Galle        1097372    99.667288         66.146644  19.939273      60.187794
+ Anuradhapura         960080    66.495033         61.793602  22.939338      61.807141
+      Badulla         872307    82.339520         64.755956  21.555484      60.695833
+      Kegalle         870476   107.049070         68.751842  19.677165      59.258613
+       Matara         837889    98.724008         69.769181  20.680186      58.903506
+     Puttalam         818816    68.835826         62.204416  22.714016      61.650603
+       Ampara         744551    51.926306         63.304155  25.515378      61.235429
+ Nuwara Eliya         725280    75.233061         69.492397  23.397584      58.999697
+   Hambantota         671418    80.200991         68.106239  22.482567      59.486192
+   Batticaloa         595918    51.126032         59.051007  24.566971      62.872912
+       Jaffna         594751   100.138019         64.619639  19.613418      60.746094
+   Moneragala         527585    64.048715         62.943506  23.547296      61.370964
+       Matale         526870    85.128036         68.162523  21.894965      59.466282
+  Polonnaruwa         447530    71.588800         63.488445  22.631779      61.166402
+  Trincomalee         442745    44.002838         60.243580  26.107127      62.404996
+     Vavuniya         172312    62.715016         57.633197  22.469706      63.438414
+  Kilinochchi         136710    59.365300         54.560152  22.150538      64.699729
+       Mannar         123756    52.115798         59.112357  24.423058      62.848670
+   Mullaitivu         122619    58.902194         56.605533  22.746883      63.854704
