@@ -500,6 +500,33 @@ def main():
     if selected_age_groups:
         age_labels = [ag.split(" ")[0] for ag in selected_age_groups]  # Get just the age range
         pop_label = f"Population ({', '.join(age_labels)})"
+    
+        # --- ESTIMATION LOGIC ---
+        # If age groups are selected, estimated gender breakdown based on overall sex ratio
+        # because the dataset does not have exact gender counts per age group.
+        pct_male = total_male / total_pop if total_pop > 0 else 0
+        pct_female = total_female / total_pop if total_pop > 0 else 0
+        
+        # Override totals with estimates for display
+        display_male = display_pop * pct_male
+        display_female = display_pop * pct_female
+        
+        gender_label_suffix = " (Est.)"
+        gender_delta_suffix = " (Est. Breakdown)"
+        
+        # Adjust main display population if a specific Gender Focus is selected
+        if selected_gender == "Male":
+            display_pop = display_male
+        elif selected_gender == "Female":
+            display_pop = display_female
+            
+    else:
+        # Standard values when no age filter
+        display_male = total_male
+        display_female = total_female
+        gender_label_suffix = ""
+        gender_delta_suffix = ""
+
     if selected_gender != "All":
         pop_label = f"{selected_gender} {pop_label}"
     
@@ -511,9 +538,17 @@ def main():
         delta_str = f"{pct_of_total:.1f}% of total" if (selected_age_groups or selected_gender != "All") else None
         st.metric(label=pop_label, value=f"{display_pop:,.0f}", delta=delta_str)
     with col2:
-        st.metric(label="Male Population", value=f"{total_male:,.0f}", delta=f"{(total_male/total_pop)*100:.1f}%" if total_pop > 0 else "0%")
+        st.metric(
+            label=f"Male Population{gender_label_suffix}", 
+            value=f"{display_male:,.0f}", 
+            delta=f"{(display_male/display_pop)*100:.1f}%" if display_pop > 0 else "0%"
+        )
     with col3:
-        st.metric(label="Female Population", value=f"{total_female:,.0f}", delta=f"{(total_female/total_pop)*100:.1f}%" if total_pop > 0 else "0%")
+        st.metric(
+            label=f"Female Population{gender_label_suffix}", 
+            value=f"{display_female:,.0f}", 
+            delta=f"{(display_female/display_pop)*100:.1f}%" if display_pop > 0 else "0%"
+        )
     with col4:
         # Dependency Ratio: (Age 0-14 + Age 65+) / Age 15-59 * 100
         # Determine dependents and working age from current filtered data
@@ -529,13 +564,13 @@ def main():
     # Pre-calculate Figures to separate logic from layout
     
     # 1. Gender Donut
-    # Note: Dataset doesn't have gender x age breakdown, so gender chart shows totals
+    # Note: Dataset doesn't have gender x age breakdown, ESTIMATED if age filter active
     gender_note = None
     if selected_age_groups:
-        gender_note = "⚠️ Gender data is for all ages (breakdown by age not available)"
+        gender_note = "⚠️ Gender breakdown is APPROVED ESTIMATION based on regional sex ratio (actual data unavailable by age)."
     
     labels = ['Male', 'Female']
-    values = [total_male, total_female]
+    values = [display_male, display_female]
     fig_gender = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=['#0ea5e9', '#ec4899'])])
     fig_gender.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
