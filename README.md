@@ -45,4 +45,4 @@ The project is organized as follows:
 
 ## Author
 
-- Theepan
+- Vithjeshayan S
